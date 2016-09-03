@@ -108,11 +108,11 @@ var CivMap = function (_React$Component) {
               RL.LayersControl.Overlay,
               {
                 key: 'full map ' + m.name,
-                name: '[Full] ' + m.name,
+                name: m.name,
                 checked: false
               },
               React.createElement(RL.ImageOverlay, {
-                url: dataRoot + 'maps/' + m.url,
+                url: m.url,
                 bounds: Util.makeBounds(m.bounds)
               })
             );

@@ -20,7 +20,7 @@ RL.setIconDefaultImagePath('/leaflet-dist/images');
 
 var dataRoot = 'https://raw.githubusercontent.com/CivMap/civ3-data/master/';
 
-var emptyImg = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+var errorTileUrl = '/no-tile.png';
 
 var mcCRS = L.extend({}, L.CRS.Simple, {
   transformation: new L.Transformation(1, 0, 1, 0)
@@ -94,7 +94,7 @@ var CivMap = function (_React$Component) {
               React.createElement(RL.TileLayer, {
                 attribution: Util.attribution,
                 url: dataRoot + 'tiles/' + world.name + '/{x}_{y}.png',
-                errorTileUrl: emptyImg,
+                errorTileUrl: errorTileUrl,
                 tileSize: 256,
                 bounds: Util.makeBounds(world.bounds),
                 minZoom: 0,

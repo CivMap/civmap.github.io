@@ -16,8 +16,6 @@ var RL = require('react-leaflet');
 
 var Util = require('./util.js');
 
-RL.setIconDefaultImagePath('/leaflet-dist/images');
-
 var dataRoot = 'https://raw.githubusercontent.com/CivMap/civ3-data/master/';
 
 var errorTileUrl = '/no-tile.png';
@@ -26,43 +24,81 @@ var mcCRS = L.extend({}, L.CRS.Simple, {
   transformation: new L.Transformation(1, 0, 1, 0)
 });
 
-var CivMap = function (_React$Component) {
-  _inherits(CivMap, _React$Component);
+var CoordsDisplay = function (_React$Component) {
+  _inherits(CoordsDisplay, _React$Component);
+
+  function CoordsDisplay() {
+    _classCallCheck(this, CoordsDisplay);
+
+    return _possibleConstructorReturn(this, (CoordsDisplay.__proto__ || Object.getPrototypeOf(CoordsDisplay)).apply(this, arguments));
+  }
+
+  _createClass(CoordsDisplay, [{
+    key: 'render',
+    value: function render() {
+      var text = 'x ' + parseInt(this.props.cursor.lng) + ' ' + parseInt(this.props.cursor.lat) + ' z';
+      return React.createElement(
+        'div',
+        { className: 'coords-display leaflet-control leaflet-control-layers' },
+        text
+      );
+    }
+  }]);
+
+  return CoordsDisplay;
+}(React.Component);
+
+var CivMap = function (_React$Component2) {
+  _inherits(CivMap, _React$Component2);
 
   function CivMap(props) {
     _classCallCheck(this, CivMap);
 
-    var _this = _possibleConstructorReturn(this, (CivMap.__proto__ || Object.getPrototypeOf(CivMap)).call(this, props));
+    var _this2 = _possibleConstructorReturn(this, (CivMap.__proto__ || Object.getPrototypeOf(CivMap)).call(this, props));
 
-    _this.state = {
-      activeWorld: Util.getWorld(props.worlds, props.initialView.worldName),
-      maps: {}
+    _this2.state = {
+      view: Util.hashToView(location.hash),
+      maps: {},
+      cursorPos: L.latLng(0, 0)
     };
-    return _this;
+    return _this2;
   }
 
   _createClass(CivMap, [{
     key: 'componentWillMount',
     value: function componentWillMount() {
+      var _this3 = this;
+
       Util.getJSON(dataRoot + 'meta/maps.json', function (maps) {
         this.setState({ maps: maps });
       }.bind(this));
+      if ("onhashchange" in window) {
+        window.onhashchange = function () {
+          _this3.setState({ view: Util.hashToView(location.hash) });
+        };
+      }
     }
   }, {
     key: 'onbaselayerchange',
     value: function onbaselayerchange(o) {
-      this.setState({ activeWorld: Util.getWorld(this.props.worlds, o.name, this.state.activeWorld) });
+      this.state.view.worldName = o.name;
+      this.setState({ view: this.state.view });
       this.updateHash(o);
     }
   }, {
     key: 'updateHash',
     value: function updateHash(o) {
-      if (this.state.activeWorld && 'name' in this.state.activeWorld) location.hash = Util.viewToHash(o.target, this.state.activeWorld.name);
+      location.hash = Util.viewToHash(o.target, this.state.view.worldName);
+    }
+  }, {
+    key: 'onmousemove',
+    value: function onmousemove(o) {
+      this.setState({ cursorPos: o.latlng });
     }
   }, {
     key: 'render',
     value: function render() {
-      var activeWorld = this.state.activeWorld;
+      var activeWorld = Util.getWorld(this.props.worlds, this.state.view.worldName);
       var activeWorldMaps = (this.state.maps || {})[activeWorld.name] || [];
       var maxBounds = L.latLngBounds(Util.makeBounds(activeWorld.bounds));
       maxBounds.extend(Util.radiusToBounds(activeWorld.radius));
@@ -75,13 +111,16 @@ var CivMap = function (_React$Component) {
           className: 'map',
           crs: mcCRS,
           maxBounds: maxBounds,
-          center: Util.xz(this.props.initialView.x, this.props.initialView.z),
-          zoom: this.props.initialView.zoom,
+          center: Util.xz(this.state.view.x, this.state.view.z),
+          zoom: this.state.view.zoom,
           maxZoom: 5,
           minZoom: 0,
+          animate: true,
           onmoveend: this.updateHash.bind(this),
-          onbaselayerchange: this.onbaselayerchange.bind(this)
+          onbaselayerchange: this.onbaselayerchange.bind(this),
+          onmousemove: this.onmousemove.bind(this)
         },
+        React.createElement(CoordsDisplay, { cursor: this.state.cursorPos }),
         React.createElement(
           RL.LayersControl,
           { position: 'topright' },
@@ -145,7 +184,7 @@ Util.getJSON(dataRoot + 'meta/worlds.json', function (worlds) {
   worlds = worlds.filter(function (w) {
     return 'bounds' in w;
   }); // ignore incomplete world data
-  ReactDOM.render(React.createElement(CivMap, { worlds: worlds, initialView: Util.hashToView(location.hash) }), document.getElementById('civmap'));
+  ReactDOM.render(React.createElement(CivMap, { worlds: worlds }), document.getElementById('civmap'));
 });
 
 },{"./util.js":2,"leaflet":28,"react":370,"react-dom":194,"react-leaflet":219}],2:[function(require,module,exports){

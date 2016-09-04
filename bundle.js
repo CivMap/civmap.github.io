@@ -24,8 +24,39 @@ var mcCRS = L.extend({}, L.CRS.Simple, {
   transformation: new L.Transformation(1, 0, 1, 0)
 });
 
-var CoordsDisplay = function (_React$Component) {
-  _inherits(CoordsDisplay, _React$Component);
+var Centered = function (_React$Component) {
+  _inherits(Centered, _React$Component);
+
+  function Centered() {
+    _classCallCheck(this, Centered);
+
+    return _possibleConstructorReturn(this, (Centered.__proto__ || Object.getPrototypeOf(Centered)).apply(this, arguments));
+  }
+
+  _createClass(Centered, [{
+    key: 'render',
+    value: function render() {
+      return React.createElement(
+        'div',
+        { className: 'center-outer full' },
+        React.createElement(
+          'div',
+          { className: 'center-middle' },
+          React.createElement(
+            'div',
+            { className: 'center-inner' },
+            this.props.children
+          )
+        )
+      );
+    }
+  }]);
+
+  return Centered;
+}(React.Component);
+
+var CoordsDisplay = function (_React$Component2) {
+  _inherits(CoordsDisplay, _React$Component2);
 
   function CoordsDisplay() {
     _classCallCheck(this, CoordsDisplay);
@@ -36,7 +67,7 @@ var CoordsDisplay = function (_React$Component) {
   _createClass(CoordsDisplay, [{
     key: 'render',
     value: function render() {
-      var text = 'x ' + parseInt(this.props.cursor.lng) + ' ' + parseInt(this.props.cursor.lat) + ' z';
+      var text = 'X ' + parseInt(this.props.cursor.lng) + ' ' + parseInt(this.props.cursor.lat) + ' Z';
       return React.createElement(
         'div',
         { className: 'coords-display leaflet-control leaflet-control-layers' },
@@ -48,20 +79,20 @@ var CoordsDisplay = function (_React$Component) {
   return CoordsDisplay;
 }(React.Component);
 
-var CivMap = function (_React$Component2) {
-  _inherits(CivMap, _React$Component2);
+var CivMap = function (_React$Component3) {
+  _inherits(CivMap, _React$Component3);
 
   function CivMap(props) {
     _classCallCheck(this, CivMap);
 
-    var _this2 = _possibleConstructorReturn(this, (CivMap.__proto__ || Object.getPrototypeOf(CivMap)).call(this, props));
+    var _this3 = _possibleConstructorReturn(this, (CivMap.__proto__ || Object.getPrototypeOf(CivMap)).call(this, props));
 
-    _this2.state = {
-      activeWorld: Util.getWorld(props.worlds, props.initialView.worldName),
+    _this3.state = {
+      view: Util.hashToView(location.hash),
       maps: {},
       cursorPos: L.latLng(0, 0)
     };
-    return _this2;
+    return _this3;
   }
 
   _createClass(CivMap, [{
@@ -74,16 +105,15 @@ var CivMap = function (_React$Component2) {
   }, {
     key: 'onbaselayerchange',
     value: function onbaselayerchange(o) {
-      this.setState({ activeWorld: Util.getWorld(this.props.worlds, o.name, this.state.activeWorld) });
+      this.state.view.worldName = o.name;
+      this.setState({ view: this.state.view });
       this.updateHash(o);
     }
   }, {
     key: 'updateHash',
     value: function updateHash(o) {
-      if (this.state.activeWorld && 'name' in this.state.activeWorld) {
-        var stateUrl = '#' + Util.viewToHash(o.target, this.state.activeWorld.name);
-        history.replaceState({}, '', stateUrl);
-      }
+      var stateUrl = '#' + Util.viewToHash(o.target, this.state.view.worldName);
+      history.replaceState({}, '', stateUrl);
     }
   }, {
     key: 'onmousemove',
@@ -93,21 +123,24 @@ var CivMap = function (_React$Component2) {
   }, {
     key: 'render',
     value: function render() {
-      var activeWorld = this.state.activeWorld;
+      var activeWorld = Util.getWorld(this.props.worlds, this.state.view.worldName);
       var activeWorldMaps = (this.state.maps || {})[activeWorld.name] || [];
-      var maxBounds = L.latLngBounds(Util.makeBounds(activeWorld.bounds));
-      maxBounds.extend(Util.radiusToBounds(activeWorld.radius));
-      activeWorldMaps.map(function (m) {
-        return maxBounds.extend(Util.makeBounds(m.bounds));
-      });
+      var maxBounds = null;
+      if (activeWorld.bounds) {
+        maxBounds = L.latLngBounds(Util.makeBounds(activeWorld.bounds));
+        maxBounds.extend(Util.radiusToBounds(activeWorld.radius));
+        activeWorldMaps.map(function (m) {
+          return maxBounds.extend(Util.makeBounds(m.bounds));
+        });
+      }
       return React.createElement(
         RL.Map,
         {
           className: 'map',
           crs: mcCRS,
           maxBounds: maxBounds,
-          center: Util.xz(this.props.initialView.x, this.props.initialView.z),
-          zoom: this.props.initialView.zoom,
+          center: Util.xz(this.state.view.x, this.state.view.z),
+          zoom: this.state.view.zoom,
           maxZoom: 5,
           minZoom: 0,
           onmoveend: this.updateHash.bind(this),
@@ -115,6 +148,26 @@ var CivMap = function (_React$Component2) {
           onmousemove: this.onmousemove.bind(this)
         },
         React.createElement(CoordsDisplay, { cursor: this.state.cursorPos }),
+        activeWorld.bounds ? null : React.createElement(
+          Centered,
+          null,
+          React.createElement(
+            'div',
+            { className: 'message' },
+            React.createElement(
+              'h1',
+              null,
+              'Unknown world "',
+              this.state.view.worldName,
+              '"'
+            ),
+            React.createElement(
+              'p',
+              null,
+              'Choose a world on the top right'
+            )
+          )
+        ),
         React.createElement(
           RL.LayersControl,
           { position: 'topright' },
@@ -150,7 +203,7 @@ var CivMap = function (_React$Component2) {
               })
             );
           }),
-          React.createElement(
+          activeWorld.radius ? React.createElement(
             RL.LayersControl.Overlay,
             { name: 'world border', checked: true },
             React.createElement(RL.Circle, {
@@ -160,7 +213,7 @@ var CivMap = function (_React$Component2) {
               stroke: true,
               fill: false
             })
-          ),
+          ) : null,
           React.createElement(
             RL.LayersControl.Overlay,
             { name: 'world center' },
@@ -178,7 +231,7 @@ Util.getJSON(dataRoot + 'meta/worlds.json', function (worlds) {
   worlds = worlds.filter(function (w) {
     return 'bounds' in w;
   }); // ignore incomplete world data
-  ReactDOM.render(React.createElement(CivMap, { worlds: worlds, initialView: Util.hashToView(location.hash) }), document.getElementById('civmap'));
+  ReactDOM.render(React.createElement(CivMap, { worlds: worlds }), document.getElementById('civmap'));
 });
 
 },{"./util.js":2,"leaflet":28,"react":370,"react-dom":194,"react-leaflet":219}],2:[function(require,module,exports){
@@ -214,7 +267,7 @@ function viewToHash(leaf, worldName) {
 }
 
 function hashToView(hash) {
-  if (!hash) return { worldName: 'dracontas', x: 0, z: 0, zoom: 0 }; // default world if no hash
+  if (!hash) return { worldName: null, x: 0, z: 0, zoom: 0 };
 
   var _hash$slice$split$con = hash.slice(1).split('/', 4).concat([0, 0, 0]);
 
@@ -236,12 +289,11 @@ function radiusToBounds(radius) {
   return [xz(-radius, -radius), xz(radius, radius)];
 }
 
-function getWorld(worlds, worldName, defaultWorld) {
-  if (!worldName) return defaultWorld || worlds[0];
+function getWorld(worlds, worldName) {
   var activeWorld = worlds.filter(function (w) {
     return w.name === worldName;
   })[0];
-  if (!activeWorld) return defaultWorld || worlds[0]; // unknown world
+  if (!activeWorld) return {}; // unknown worldName
   return activeWorld;
 }
 

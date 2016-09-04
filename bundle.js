@@ -57,7 +57,7 @@ var CivMap = function (_React$Component2) {
     var _this2 = _possibleConstructorReturn(this, (CivMap.__proto__ || Object.getPrototypeOf(CivMap)).call(this, props));
 
     _this2.state = {
-      view: Util.hashToView(location.hash),
+      activeWorld: Util.getWorld(props.worlds, props.initialView.worldName),
       maps: {},
       cursorPos: L.latLng(0, 0)
     };
@@ -67,28 +67,23 @@ var CivMap = function (_React$Component2) {
   _createClass(CivMap, [{
     key: 'componentWillMount',
     value: function componentWillMount() {
-      var _this3 = this;
-
       Util.getJSON(dataRoot + 'meta/maps.json', function (maps) {
         this.setState({ maps: maps });
       }.bind(this));
-      if ("onhashchange" in window) {
-        window.onhashchange = function () {
-          _this3.setState({ view: Util.hashToView(location.hash) });
-        };
-      }
     }
   }, {
     key: 'onbaselayerchange',
     value: function onbaselayerchange(o) {
-      this.state.view.worldName = o.name;
-      this.setState({ view: this.state.view });
+      this.setState({ activeWorld: Util.getWorld(this.props.worlds, o.name, this.state.activeWorld) });
       this.updateHash(o);
     }
   }, {
     key: 'updateHash',
     value: function updateHash(o) {
-      location.hash = Util.viewToHash(o.target, this.state.view.worldName);
+      if (this.state.activeWorld && 'name' in this.state.activeWorld) {
+        var stateUrl = '#' + Util.viewToHash(o.target, this.state.activeWorld.name);
+        history.replaceState({}, '', stateUrl);
+      }
     }
   }, {
     key: 'onmousemove',
@@ -98,7 +93,7 @@ var CivMap = function (_React$Component2) {
   }, {
     key: 'render',
     value: function render() {
-      var activeWorld = Util.getWorld(this.props.worlds, this.state.view.worldName);
+      var activeWorld = this.state.activeWorld;
       var activeWorldMaps = (this.state.maps || {})[activeWorld.name] || [];
       var maxBounds = L.latLngBounds(Util.makeBounds(activeWorld.bounds));
       maxBounds.extend(Util.radiusToBounds(activeWorld.radius));
@@ -111,11 +106,10 @@ var CivMap = function (_React$Component2) {
           className: 'map',
           crs: mcCRS,
           maxBounds: maxBounds,
-          center: Util.xz(this.state.view.x, this.state.view.z),
-          zoom: this.state.view.zoom,
+          center: Util.xz(this.props.initialView.x, this.props.initialView.z),
+          zoom: this.props.initialView.zoom,
           maxZoom: 5,
           minZoom: 0,
-          animate: true,
           onmoveend: this.updateHash.bind(this),
           onbaselayerchange: this.onbaselayerchange.bind(this),
           onmousemove: this.onmousemove.bind(this)
@@ -184,7 +178,7 @@ Util.getJSON(dataRoot + 'meta/worlds.json', function (worlds) {
   worlds = worlds.filter(function (w) {
     return 'bounds' in w;
   }); // ignore incomplete world data
-  ReactDOM.render(React.createElement(CivMap, { worlds: worlds }), document.getElementById('civmap'));
+  ReactDOM.render(React.createElement(CivMap, { worlds: worlds, initialView: Util.hashToView(location.hash) }), document.getElementById('civmap'));
 });
 
 },{"./util.js":2,"leaflet":28,"react":370,"react-dom":194,"react-leaflet":219}],2:[function(require,module,exports){
@@ -192,7 +186,7 @@ Util.getJSON(dataRoot + 'meta/worlds.json', function (worlds) {
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
-var attribution = '<a href="https://github.com/CivMap">Civcraft Mapping Agency</a>' + ' | Visit civmap.herokuapp.com' + ' | <a href="https://github.com/CivMap/civmap">contribute</a>';
+var attribution = '<a href="https://github.com/CivMap">Civcraft Mapping Agency</a>' + ' | Visit civmap.herokuapp.com' + ' | <a href="https://github.com/CivMap/civmap#contribute">contribute</a>';
 
 function getJSON(url, onData, onErr) {
   var request = new XMLHttpRequest();

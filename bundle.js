@@ -179,7 +179,7 @@ var CivMap = function (_React$Component3) {
                 checked: world.name === activeWorld.name },
               React.createElement(RL.TileLayer, {
                 attribution: Util.attribution,
-                url: dataRoot + 'tiles/' + world.name + '/{x}_{y}.png',
+                url: dataRoot + 'tiles/' + world.name + '/z{z}/{x},{y}.png',
                 errorTileUrl: errorTileUrl,
                 tileSize: 256,
                 bounds: Util.makeBounds(world.bounds),
@@ -199,7 +199,8 @@ var CivMap = function (_React$Component3) {
               },
               React.createElement(RL.ImageOverlay, {
                 url: m.url,
-                bounds: Util.makeBounds(m.bounds)
+                bounds: Util.makeBounds(m.bounds),
+                opacity: .5
               })
             );
           }),
@@ -6694,7 +6695,7 @@ L.ImageOverlay = L.Layer.extend({
 
 	_animateZoom: function (e) {
 		var scale = this._map.getZoomScale(e.zoom),
-		    offset = this._map._latLngToNewLayerPoint(this._bounds.getNorthWest(), e.zoom, e.center);
+		    offset = this._map._latLngToNewLayerPoint(this._bounds.getSouthWest(), e.zoom, e.center);
 
 		L.DomUtil.setTransform(this._image, offset, scale);
 	},

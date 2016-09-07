@@ -158,14 +158,12 @@ var CivMap = function (_React$Component3) {
             React.createElement(
               'h1',
               null,
-              'Unknown world "',
-              this.state.view.worldName,
-              '"'
+              'Choose a world on the top right'
             ),
             React.createElement(
-              'p',
+              'h2',
               null,
-              'Choose a world on the top right'
+              this.state.view.worldName ? 'Unknown world "' + this.state.view.worldName + '"' : ''
             )
           )
         ),

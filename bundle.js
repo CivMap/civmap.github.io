@@ -9,6 +9,11 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+// what to load when?
+// first check if we can show tiles at all (tiles take long to load)
+// -> do we have tiles for this world? load them now!
+// load all other stuff in the background (radii, map overlays, , ...)
+
 var React = require('react');
 var ReactDOM = require('react-dom');
 var L = require('leaflet');
@@ -67,11 +72,12 @@ var CoordsDisplay = function (_React$Component2) {
   _createClass(CoordsDisplay, [{
     key: 'render',
     value: function render() {
-      var text = 'X ' + parseInt(this.props.cursor.lng) + ' ' + parseInt(this.props.cursor.lat) + ' Z';
+      var x = parseInt(this.props.cursor.lng);
+      var z = parseInt(this.props.cursor.lat);
       return React.createElement(
         'div',
-        { className: 'coords-display leaflet-control leaflet-control-layers' },
-        text
+        { className: 'coords-display control-box leaflet-control leaflet-control-layers' },
+        'X ' + x + ' ' + z + ' Z'
       );
     }
   }]);
@@ -89,6 +95,7 @@ var CivMap = function (_React$Component3) {
 
     _this3.state = {
       view: Util.hashToView(location.hash),
+      worldBorders: {},
       maps: {},
       cursorPos: L.latLng(0, 0)
     };
@@ -98,9 +105,14 @@ var CivMap = function (_React$Component3) {
   _createClass(CivMap, [{
     key: 'componentWillMount',
     value: function componentWillMount() {
+      var _this4 = this;
+
+      Util.getJSON(dataRoot + 'meta/world-borders.json', function (worldBorders) {
+        _this4.setState({ worldBorders: worldBorders });
+      });
       Util.getJSON(dataRoot + 'meta/maps.json', function (maps) {
-        this.setState({ maps: maps });
-      }.bind(this));
+        _this4.setState({ maps: maps });
+      });
     }
   }, {
     key: 'onbaselayerchange',
@@ -123,16 +135,20 @@ var CivMap = function (_React$Component3) {
   }, {
     key: 'render',
     value: function render() {
-      var activeWorld = Util.getWorld(this.props.worlds, this.state.view.worldName);
-      var activeWorldMaps = (this.state.maps || {})[activeWorld.name] || [];
-      var maxBounds = null;
-      if (activeWorld.bounds) {
-        maxBounds = L.latLngBounds(Util.makeBounds(activeWorld.bounds));
-        maxBounds.extend(Util.radiusToBounds(activeWorld.radius));
-        activeWorldMaps.map(function (m) {
-          return maxBounds.extend(Util.makeBounds(m.bounds));
-        });
+      var _this5 = this;
+
+      var activeWorldName = this.state.view.worldName;
+      var activeWorldMaps = (this.state.maps || {})[activeWorldName] || [];
+      var maxBounds = L.latLngBounds();
+      if (activeWorldName in this.props.tilesMeta) {
+        maxBounds.extend(this.props.tilesMeta[activeWorldName].bounds);
       }
+      if (this.state.worldBorders[activeWorldName]) {
+        maxBounds.extend(Util.radiusToBounds(this.state.worldBorders[activeWorldName]));
+      }
+      activeWorldMaps.map(function (m) {
+        return maxBounds.extend(m.bounds);
+      });
       var minZoom = -3;
       return React.createElement(
         RL.Map,
@@ -149,7 +165,7 @@ var CivMap = function (_React$Component3) {
           onmousemove: this.onmousemove.bind(this)
         },
         React.createElement(CoordsDisplay, { cursor: this.state.cursorPos }),
-        activeWorld.bounds ? null : React.createElement(
+        this.props.tilesMeta[activeWorldName] ? null : React.createElement(
           Centered,
           null,
           React.createElement(
@@ -160,28 +176,28 @@ var CivMap = function (_React$Component3) {
               null,
               'Choose a world on the top right'
             ),
-            React.createElement(
+            activeWorldName ? React.createElement(
               'h2',
               null,
-              this.state.view.worldName ? 'Unknown world "' + this.state.view.worldName + '"' : ''
-            )
+              'Unknown world "' + activeWorldName + '"'
+            ) : null
           )
         ),
         React.createElement(
           RL.LayersControl,
           { position: 'topright' },
-          this.props.worlds.map(function (world) {
+          Object.keys(this.props.tilesMeta).map(function (worldName) {
             return React.createElement(
               RL.LayersControl.BaseLayer,
-              { name: world.name,
-                key: 'tilelayer-' + world.name,
-                checked: world.name === activeWorld.name },
+              { name: worldName,
+                key: 'tilelayer-' + worldName,
+                checked: worldName === activeWorldName },
               React.createElement(RL.TileLayer, {
                 attribution: Util.attribution,
-                url: dataRoot + 'tiles/' + world.name + '/z{z}/{x},{y}.png',
+                url: dataRoot + 'tiles/' + worldName + '/z{z}/{x},{y}.png',
                 errorTileUrl: errorTileUrl,
                 tileSize: 256,
-                bounds: Util.makeBounds(world.bounds),
+                bounds: L.latLngBounds(_this5.props.tilesMeta[worldName].bounds),
                 minZoom: minZoom,
                 maxNativeZoom: 0,
                 continuousWorld: true
@@ -198,19 +214,18 @@ var CivMap = function (_React$Component3) {
               },
               React.createElement(RL.ImageOverlay, {
                 url: m.url,
-                bounds: Util.makeBounds(m.bounds),
+                bounds: L.latLngBounds(m.bounds),
                 opacity: .5
               })
             );
           }),
-          activeWorld.radius ? React.createElement(
+          this.state.worldBorders[activeWorldName] ? React.createElement(
             RL.LayersControl.Overlay,
             { name: 'world border', checked: true },
             React.createElement(RL.Circle, {
               center: [0, 0],
-              radius: activeWorld.radius,
+              radius: this.state.worldBorders[activeWorldName],
               color: '#ff8888',
-              stroke: true,
               fill: false
             })
           ) : null,
@@ -227,11 +242,40 @@ var CivMap = function (_React$Component3) {
   return CivMap;
 }(React.Component);
 
-Util.getJSON(dataRoot + 'meta/worlds.json', function (worlds) {
-  worlds = worlds.filter(function (w) {
-    return 'bounds' in w;
-  }); // ignore incomplete world data
-  ReactDOM.render(React.createElement(CivMap, { worlds: worlds }), document.getElementById('civmap'));
+var tiles_url = dataRoot + 'meta/tiles.json';
+Util.getJSON(tiles_url, function (tilesMeta) {
+  ReactDOM.render(React.createElement(CivMap, { tilesMeta: tilesMeta }), document.getElementById('civmap'));
+}, function (err_request) {
+  ReactDOM.render(React.createElement(
+    'div',
+    { className: 'message' },
+    React.createElement(
+      'h1',
+      null,
+      'Error ',
+      err_request.status
+    ),
+    React.createElement(
+      'p',
+      null,
+      'Failed loading',
+      React.createElement(
+        'a',
+        { href: tiles_url },
+        React.createElement(
+          'code',
+          null,
+          tiles_url
+        )
+      ),
+      ', response:'
+    ),
+    React.createElement(
+      'pre',
+      { style: { whiteSpace: 'pre-line' } },
+      err_request.responseText
+    )
+  ), document.getElementById('civmap'));
 });
 
 },{"./util.js":2,"leaflet":28,"react":370,"react-dom":194,"react-leaflet":219}],2:[function(require,module,exports){
@@ -281,10 +325,6 @@ function hashToView(hash) {
   return { worldName: worldName, x: parseFloat(x), z: parseFloat(z), zoom: parseFloat(zoom) };
 }
 
-function makeBounds(bounds) {
-  return [xz(bounds.min_x, bounds.min_z), xz(bounds.max_x, bounds.max_z)];
-}
-
 function radiusToBounds(radius) {
   return [xz(-radius, -radius), xz(radius, radius)];
 }
@@ -303,7 +343,6 @@ module.exports = {
   xz: xz,
   viewToHash: viewToHash,
   hashToView: hashToView,
-  makeBounds: makeBounds,
   radiusToBounds: radiusToBounds,
   getWorld: getWorld
 };

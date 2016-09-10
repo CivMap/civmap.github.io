@@ -21,10 +21,6 @@
     .leaflet-container {
       background: none;
     }
-    #loading-screen {
-      background: transparent;
-      padding: 1em;
-    }
     .center-outer {
       display: table;
       position: absolute;
@@ -51,18 +47,21 @@
     .leaflet-tile {
       image-rendering: pixelated;
     }
+    .control-box {
+      margin: 10px;
+      padding: .5em .5em;
+      border-radius: 4px;
+      background-color: rgba(255,255,255, .95);
+    }
     .coords-display {
       position: absolute;
       left: 36px;
-      margin: 10px;
       padding: .5em 1em;
-      border-radius: 4px;
-      background-color: rgba(255,255,255, .95);
     }
   </style>
 </head>
 <body>
-  <div id="loading-screen" class="full">
+  <div id="civmap" class="full">
     <div class="message">
       <h1>Loading...</h1>
       <p>
@@ -76,12 +75,6 @@
       </p>
     </div>
   </div>
-  <div id="civmap" class="full" style="display:none"></div>
   <script src="bundle.js"></script>
-  <script type="text/javascript">
-    var loadingElement = document.getElementById('loading-screen');
-    loadingElement.parentNode.removeChild(loadingElement);
-    document.getElementById('civmap').style.display = 'block';
-  </script>
 </body>
 </html>

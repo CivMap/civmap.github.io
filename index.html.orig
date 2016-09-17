@@ -4,8 +4,12 @@
   <meta charset="utf-8">
   <title>Civcraft 3.0 Maps</title>
   <link rel="icon" href="favicon.ico" />
+<<<<<<< HEAD
   <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create', 'UA-83718107-1', 'auto');ga('send', 'pageview');</script>
+  <link rel="stylesheet" href="https://npmcdn.com/leaflet@1.0.0-rc.3/dist/leaflet.css" />
+=======
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.css" />
+>>>>>>> master
   <style type="text/css">
     body, .full, .map {
       width: 100%;

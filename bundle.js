@@ -1,6 +1,8 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -72,8 +74,13 @@ var CoordsDisplay = function (_React$Component2) {
   _createClass(CoordsDisplay, [{
     key: 'render',
     value: function render() {
-      var x = parseInt(this.props.cursor.lng);
-      var z = parseInt(this.props.cursor.lat);
+      var _Util$intCoords = Util.intCoords(this.props.cursor);
+
+      var _Util$intCoords2 = _slicedToArray(_Util$intCoords, 2);
+
+      var z = _Util$intCoords2[0];
+      var x = _Util$intCoords2[1];
+
       return React.createElement(
         'div',
         { className: 'coords-display control-box leaflet-control leaflet-control-layers' },
@@ -117,6 +124,7 @@ var CivMap = function (_React$Component3) {
   }, {
     key: 'onbaselayerchange',
     value: function onbaselayerchange(o) {
+      if (!o.name) return;
       this.state.view.worldName = o.name;
       this.setState({ view: this.state.view });
       this.updateHash(o);
@@ -124,8 +132,10 @@ var CivMap = function (_React$Component3) {
   }, {
     key: 'updateHash',
     value: function updateHash(o) {
+      if (!this.state.view.worldName) return;
       var stateUrl = '#' + Util.viewToHash(o.target, this.state.view.worldName);
-      history.replaceState({}, '', stateUrl);
+      document.title = Util.viewToTitle(o.target, this.state.view.worldName);
+      history.replaceState({}, document.title, stateUrl);
     }
   }, {
     key: 'onmousemove',
@@ -139,7 +149,7 @@ var CivMap = function (_React$Component3) {
 
       var activeWorldName = this.state.view.worldName;
       var activeWorldMaps = (this.state.maps || {})[activeWorldName] || [];
-      var maxBounds = L.latLngBounds();
+      var maxBounds = L.latLngBounds([0, 0], [0, 0]);
       if (activeWorldName in this.props.tilesMeta) {
         maxBounds.extend(this.props.tilesMeta[activeWorldName].bounds);
       }
@@ -305,9 +315,34 @@ function xz(x, z) {
   return [z, x];
 }
 
+function intCoords(point) {
+  var x = parseInt(point.lng);
+  var z = parseInt(point.lat);
+  if (point.lng < 0) x -= 1;
+  if (point.lat < 0) z -= 1;
+  return [z, x];
+}
+
 function viewToHash(leaf, worldName) {
-  var center = leaf.getCenter();
-  return '' + worldName + '/' + center.lng + 'x/' + center.lat + 'z/' + leaf.getZoom() + 'zoom';
+  var _intCoords = intCoords(leaf.getCenter());
+
+  var _intCoords2 = _slicedToArray(_intCoords, 2);
+
+  var z = _intCoords2[0];
+  var x = _intCoords2[1];
+
+  return '' + worldName + '/' + x + 'x/' + z + 'z/' + leaf.getZoom() + 'zoom';
+}
+
+function viewToTitle(leaf, worldName) {
+  var _intCoords3 = intCoords(leaf.getCenter());
+
+  var _intCoords4 = _slicedToArray(_intCoords3, 2);
+
+  var z = _intCoords4[0];
+  var x = _intCoords4[1];
+
+  return worldName + ' at ' + x + ',' + z + ' - Civcraft 3.0 Maps';
 }
 
 function hashToView(hash) {
@@ -341,7 +376,9 @@ module.exports = {
   attribution: attribution,
   getJSON: getJSON,
   xz: xz,
+  intCoords: intCoords,
   viewToHash: viewToHash,
+  viewToTitle: viewToTitle,
   hashToView: hashToView,
   radiusToBounds: radiusToBounds,
   getWorld: getWorld
